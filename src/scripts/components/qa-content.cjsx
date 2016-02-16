@@ -8,7 +8,7 @@ module.exports =
     content:
       <div>
         <ol>
-          <li><DisclosedCard id="st3"/></li>
+          <li><DisclosedCard id="st3"/> ok</li>
           <li><DisclosedCard id="pctrl" /></li>
           <li><DisclosedCard id="sl" /></li>
           <li><DisclosedCard id="sljc" /></li>
@@ -27,26 +27,24 @@ module.exports =
     name: "Install Package Control"
     content:
       <Video height="400" width="483" type="video/mp4"
-             src="http://cl.ly/2X1d3m073I2v/Screen%20Recording%202016-02-14%20at%2004.04%20PM.mov" />
+             src="http://cl.ly/1T2z3E1e2B0A/Screen%20Recording%202016-02-14%20at%2004.04%20PM.mp4.mp4" />
 
   'cmdpinstall':
     name: "Open the Command Palette and select Install Package"
     content:
       <Video height="400" width="402" type="video/mp4"
-             src="http://cl.ly/2W2X2W0S2116/Install%20package.mov" />
+             src="http://cl.ly/0J0m420I1u18/Install%20package.mp4.mp4" />
 
   'sl':
     name: "Install SublimeLinter"
     content:
       <div>
-        <DisclosedCard id="cmdpinstall" />
-        <p>&hellip;then install <code>SublimeLinter</code></p>
+        <DisclosedCard id="cmdpinstall" />{" "}&hellip; then install <code>SublimeLinter</code>
       </div>
 
   'sljc':
     name: "Install SublimeLinter-javac"
     content:
       <div>
-        <DisclosedCard id="cmdpinstall" />
-        <p>&hellip;then install <code>SublimeLinter-javac</code></p>
+        <DisclosedCard id="cmdpinstall" />{" "}&hellip; then install <code>SublimeLinter-javac</code>
       </div>

@@ -17,44 +17,21 @@ module.exports =
       expanded: false
 
     render: ->
-      styles = <style children={"""
-        .card-disclosure {
-          border: 1px solid #C2DCC2;
-          color: black;
-          cursor: pointer;
-          font-size: 90%;
-          padding: 0.2em 0.5em;
-          text-align: left;
-          margin: 0.3em 0;
-          display: inline-block;
-        }
-        .card-disclosure-content {
-          border: 1px solid #C2DCC2;
-          margin: 0.7em 0;
-          padding: 0.1em 0.5em 0.5em;
-        }
-        .card-disclosure-content .card-disclosure-content {
-          border: none;
-        }
-      """} />
-
       entry = window.db[@props.id]
       if not entry?
         return <div>"Not found"</div>
       name = @props.children ? entry.name
 
       if @state.expanded
-        <fieldset className="card-disclosure-content">
+        <fieldset className="card-disclosure-content card-disclosure-outer">
           <legend
-            className="card-disclosure"
+            className="card-disclosure card-disclosure-expanded"
             onClick={=> @setState(expanded: false)}>
-            {styles}
             &#x229f; {name}</legend>
           {entry.content}
         </fieldset>
       else
         <div
-          className="card-disclosure"
+          className="card-disclosure card-disclosure-collapsed card-disclosure-outer"
           onClick={=> @setState(expanded: true)}>
-          {styles}
           &#x229e; {name}</div>
