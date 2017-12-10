@@ -42,7 +42,7 @@ class Target(object):
 
 def convert_path(src):
     if 'local' in src:
-        url = '/%s' % src['local']
+        url = '%s' % src['local']
     elif 'npm' in src:
         url = 'https://unpkg.com/%s' % src['npm']
     else:
