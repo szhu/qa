@@ -1,0 +1,33 @@
+app:
+  deps: [babel, jquery, react-commonmark, react-dom, simplemde, utf8]
+  paths:
+    - local: assets/app.css
+    - local: assets/app.jsx
+babel:
+  paths:
+    - npm: babel-standalone@6.26.0/babel.js
+font-awesome:
+  paths:
+    - npm: font-awesome@4.7.0/css/font-awesome.css
+jquery:
+  paths:
+    - npm: jquery@3.2.1/dist/jquery.js
+react:
+  paths:
+    - npm: react@16.2.0/umd/react.development.js
+react-commonmark:
+  deps: [react]
+  paths:
+    - npm: react-commonmark@3.0.0/umd/react-commonmark.js
+react-dom:
+  deps: [react]
+  paths:
+    - npm: react-dom@16.2.0/umd/react-dom.development.js
+simplemde:
+  deps: [font-awesome]
+  paths:
+    - local: assets/simplemde.css
+    - local: assets/simplemde.js
+utf8:
+  paths:
+    - npm: utf8@3.0.0/utf8.js

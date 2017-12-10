@@ -1,0 +1,65 @@
+env:
+  browser: true
+  es6: true
+extends:
+  - "eslint:recommended"
+  - "plugin:react/recommended"
+parser: "babel-eslint"
+parserOptions:
+  ecmaFeatures:
+    experimentalObjectRestSpread: true
+    jsx: true
+plugins:
+  - react
+rules:
+  default-case:
+    - warn
+  indent:
+    - warn
+    - 2
+    - SwitchCase: 1
+  linebreak-style:
+    - warn
+    - unix
+  lines-between-class-members:
+    - warn
+    - always
+  no-console:
+    - warn
+  no-debugger:
+    - warn
+  no-empty:
+    - warn
+  no-fallthrough:
+    - warn
+  no-multiple-empty-lines:
+    - warn
+    - max: 1
+  no-unused-vars:
+    - warn
+  no-useless-return:
+    - warn
+  padding-line-between-statements:
+    - warn
+    - blankLine: always
+      prev: class
+      next: class
+  quotes:
+    - warn
+    - double
+    - allowTemplateLiterals: true
+  react/display-name:
+    - off
+  react/jsx-no-undef:
+    - error
+    - allowGlobals: true
+  react/jsx-pascal-case:
+    - warn
+  react/prefer-es6-class:
+    - warn
+    - always
+  react/prop-types:
+    - off
+  semi:
+    - warn
+    - always

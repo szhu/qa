@@ -1,0 +1,14 @@
+.cm-s-paper {
+    font-family: Menlo, 'Courier New', monospace;
+    font-size: 8pt;
+}
+
+.github-user-avatar {
+    display: inline-block;
+    max-height: 1em;
+    vertical-align: -9%;
+}
+
+.para {
+    margin: 0.5em 0;
+}
