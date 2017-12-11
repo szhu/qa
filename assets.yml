@@ -1,8 +1,8 @@
 app:
   deps: [babel, jquery, react-commonmark, react-dom, simplemde, utf8]
   paths:
-    - local: assets/app.css
-    - local: assets/app.jsx
+    - local: app.css
+    - local: app.jsx
 babel:
   paths:
     - npm: babel-standalone@6.26.0/babel.js
@@ -26,8 +26,8 @@ react-dom:
 simplemde:
   deps: [font-awesome]
   paths:
-    - local: assets/simplemde.css
-    - local: assets/simplemde.js
+    - local: simplemde.css
+    - local: simplemde.js
 utf8:
   paths:
     - npm: utf8@3.0.0/utf8.js

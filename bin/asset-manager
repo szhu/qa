@@ -1,0 +1,196 @@
+#!/usr/bin/env python
+
+import yaml
+
+
+def get_config(input_file):
+    with open(input_file, 'r') as f:
+        return yaml.load(f)
+
+
+def make_parent_dirs(path):
+    from errno import EEXIST
+    from os import makedirs
+    from os.path import dirname, isdir
+
+    try:
+        makedirs(dirname(path))
+    except OSError as exc:
+        if exc.errno == EEXIST and isdir(path):
+            pass
+        else:
+            raise
+
+
+def download_file_with_mkdir(src, dst):
+    import urllib2
+    opener = urllib2.build_opener()
+    opener.addheaders = [('User-Agent', 'Mozilla/5.0')]
+    f = opener.open(src)
+    content = f.read()
+    make_parent_dirs(dst)
+    with open(dst, 'wb') as f:
+        f.write(content)
+
+
+class Packages(dict):
+    def __init__(self, src):
+        for package_name, package_src in src.iteritems():
+            package = Package(package_src)
+            self[package_name] = package
+
+    def in_dependency_order(self):
+        results = []
+        todo = list(sorted(self))
+        while todo:
+            current = todo.pop(0)
+
+            insert_to_front = []
+            for dep in self[current].dep_names:
+                if dep in todo:
+                    todo.remove(dep)
+                    insert_to_front.append(dep)
+            if insert_to_front:
+                todo = insert_to_front + [current] + todo
+            else:
+                results.append(current)
+
+        from collections import OrderedDict
+        return OrderedDict((key, self[key]) for key in results)
+
+    def paths_by_section(self):
+        from collections import defaultdict
+        result = defaultdict(list)
+        for package in self.values():
+            for path in package.paths:
+                result[path.html_section].append(path)
+
+        return result
+
+    def print_order(self):
+        print "Order:"
+        print self.in_dependency_order().keys()
+        print
+
+    def print_htmls(self, version):
+        for section in ('style', 'script'):
+            print section
+            for path in self.paths_by_section()[section]:
+                print path[version].html
+            print
+
+    def download_local_assets(self):
+        for package in self.values():
+            for path in package.paths:
+                if 'npm' in path.src:
+                    print path['unpkg'], '>', 'assets/' + path.src["npm"]
+                    download_file_with_mkdir(path['unpkg'], 'assets/' + path.src["npm"])
+
+
+class Package(object):
+    def __init__(self, src):
+        self.src = src
+        self._get_paths()
+        self._get_dep_names()
+
+    def _get_paths(self):
+        self.paths = map(Path, self.src['paths'])
+
+    def _get_dep_names(self):
+        if 'deps' in self.src:
+            self.dep_names = self.src['deps']
+        else:
+            self.dep_names = []
+
+
+class Path(dict):
+    def __init__(self, src):
+        self.src = src
+        self._get_versions()
+
+    def _get_versions(self):
+        if 'local' in self.src:
+            self['local'] = PathVersion('assets/%s' % self.src['local'])
+            self['unpkg'] = self['local']
+        elif 'npm' in self.src:
+            self['local'] = PathVersion('assets/%s' % self.src['npm'])
+            self['unpkg'] = PathVersion('https://unpkg.com/%s' % self.src['npm'])
+        else:
+            raise ValueError("No valid path schemes for %s" % self.src)
+
+    @property
+    def html_section(self):
+        return self['local'].html_section
+
+
+class PathVersion(str):
+    def __init__(self, *args, **kwargs):
+        str.__init__(self, *args, **kwargs)
+        if self.endswith('.js'):
+            self.html_section = 'script'
+            self.html = '''<script type="text/javascript" src="%s"></script>''' % self
+        elif self.endswith('.jsx'):
+            self.html_section = 'script'
+            self.html = '''<script type="text/jsx" src="%s"></script>''' % self
+        elif self.endswith('.css'):
+            self.html_section = 'style'
+            self.html = '''<link rel="stylesheet" href="%s" />''' % self
+        else:
+            raise ValueError("Unsupported extension for %s" % self)
+
+
+def print_sort_yaml(path):
+    from subprocess import check_output
+
+    with open(path, 'rb') as f:
+        old = f.read()
+
+    print "Old content:"
+    print old
+    print
+
+    with open(path, 'rb') as f:
+        new = check_output(['sort_yaml'], stdin=f)
+
+    print "New content:"
+    print new
+    print
+
+    if old == new:
+        print "Old and new are identical."
+    else:
+        with open(path, 'wb') as f:
+            f.write(new)
+        print 'Overwritten.'
+
+
+def main(command=None):
+    from os import chdir
+    from os.path import dirname
+    from os.path import realpath
+    chdir(dirname(dirname(realpath(__file__))))
+
+    if command == 'unpkg':
+        packages_src = get_config('assets.yml')
+        packages = Packages(packages_src)
+        packages.print_order()
+        packages.print_htmls('unpkg')
+    elif command == 'local':
+        packages_src = get_config('assets.yml')
+        packages = Packages(packages_src)
+        packages.print_order()
+        packages.print_htmls('local')
+        raw_input("Press enter to (re)download assets, Ctrl-C to cancel.")
+        packages.download_local_assets()
+    elif command == 'sort':
+        print_sort_yaml('assets.yml')
+    else:
+        from sys import argv
+        print "Usage: %s unpkg  # Prints unpkg.com versions of asset HTML tags" % argv[0]
+        print "       %s local  # Prints local versions of asset HTML tags" % argv[0]
+        print "       %s sort   # Normalizes assets.yml by sorting it" % argv[0]
+
+
+if __name__ == '__main__':
+    from sys import argv
+    main(*argv[1:])
