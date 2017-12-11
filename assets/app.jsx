@@ -267,7 +267,7 @@ const GithubFileStates = {
     hasContent: false,
     shouldShowEditor: false,
     message: () => {
-      return <div>Loading…</div>;
+      return <span>Loading…</span>;
     },
     transitions: {
       startLoad: "LOADING",
@@ -284,7 +284,7 @@ const GithubFileStates = {
     hasContent: true,
     shouldShowEditor: true,
     message: () => {
-      return <div>Loading…</div>;
+      return <span>Loading…</span>;
     },
     transitions: {
       startLoad: "RELOADING",
@@ -491,15 +491,22 @@ class GithubFileReadView extends ReactComponentWithFiniteStates(GithubFileStates
     await this.load();
   }
 
+  async componentWillUnmount() {
+    this.fetchedFileRequest && this.fetchedFileRequest.abort();
+  }
+
   async load() {
     this.transitionFiniteState("startLoad");
     try {
-      this.fetchedFile = await this.props.github.request(
+      this.fetchedFileRequest = this.props.github.request(
         "GET", `/repos/${this.props.repo}/contents/${this.props.filepath}`
       );
+      this.fetchedFile = await this.fetchedFileRequest;
     }
     catch (request) {
       switch (request.status) {
+        case 0:
+          return;
         case 401:
           return this.transitionFiniteState("LOAD_FAILED_401");
         case 404:
