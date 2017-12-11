@@ -471,7 +471,7 @@ class GithubFileReadView extends ReactComponentWithFiniteStates(GithubFileStates
         return <a href={props.href} target="_blank">{props.children}</a>;
       }
       else {
-        return <GithubFileReadViewLink
+        return <GithubFileReadViewExpandableLink
           repo={this.props.repo}
           filepath={`howto/${props.href}`}
           github={this.props.github}
@@ -523,7 +523,7 @@ class GithubFileReadView extends ReactComponentWithFiniteStates(GithubFileStates
   }
 }
 
-class GithubFileReadViewLink extends React.Component {
+class GithubFileReadViewExpandableLink extends React.Component {
   render() {
     if (this.state.expanded) {
       return (
@@ -572,18 +572,17 @@ function findRepoName() {
   throw `No repo set. Set one as follows: localStorage["szhu.qa.repoName"] = "your/repo"`;
 }
 
-const main = async () => {
+function main(repo, el) {
   var github = window.github = new Github();
-  var repo = findRepoName();
   github.accessToken = localStorage["szhu.qa.login"];
 
   ReactDOM.render(
     <GithubFileView
-      repo={repo}
+      repo={findRepoName()}
       filepath="howto/index.md"
       github={github} />,
-    document.getElementById("react-root")
+    document.getElementById("react-root"));,
   );
-};
+}
 
-$(() => main());
+$(main);
