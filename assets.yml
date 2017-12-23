@@ -9,6 +9,12 @@ babel:
 font-awesome:
   paths:
     - npm: font-awesome@4.7.0/css/font-awesome.css
+    - npm: font-awesome@4.7.0/fonts/fontawesome-webfont.eot
+    - npm: font-awesome@4.7.0/fonts/fontawesome-webfont.svg
+    - npm: font-awesome@4.7.0/fonts/fontawesome-webfont.ttf
+    - npm: font-awesome@4.7.0/fonts/fontawesome-webfont.woff
+    - npm: font-awesome@4.7.0/fonts/fontawesome-webfont.woff2
+    - npm: font-awesome@4.7.0/fonts/FontAwesome.otf
 jquery:
   paths:
     - npm: jquery@3.2.1/dist/jquery.js
