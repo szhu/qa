@@ -1,14 +1,203 @@
+body {
+  font: 16px Arial, sans-serif;
+  margin: 1em 1em;
+}
+
+ol {
+  list-style-type: decimal;
+  margin-left: 1.5em;
+}
+
+p,
+li {
+  margin: 0.5em 0;
+}
+
+code {
+  font-family: monospace;
+}
+
 .cm-s-paper {
-    font-family: Menlo, 'Courier New', monospace;
-    font-size: 8pt;
+  font-family: Menlo, 'Courier New', monospace;
+  font-size: 8pt;
 }
 
 .github-user-avatar {
-    display: inline-block;
-    max-height: 1em;
-    vertical-align: -9%;
+  display: inline-block;
+  max-height: 1em;
+  vertical-align: -9%;
 }
 
 .para {
-    margin: 0.5em 0;
+  margin: 0.5em 0;
+}
+
+/* Widgets */
+
+.widget-video {
+  background: black;
+  border: 2px solid black;
+  border: 2px solid rgba(0, 0, 0, 0.6);
+  border-radius: 3px;
+}
+
+.widget-webpage-browser {
+  background: gainsboro;
+  border: 1px solid gainsboro;
+  border-radius: 3px;
+  display: inline-block;
+}
+
+.widget-webpage-toolbar {
+  display: flex;
+}
+
+.widget-webpage-urlbar {
+  align-items: center;
+  background: white;
+  border-radius: 2px;
+  color: black;
+  display: flex;
+  flex-grow: 1;
+  font: 14px Arial, sans-serif;
+  margin: 2px 3px 3px;
+  padding: 0.1em 0.5em;
+  text-decoration: none;
+}
+
+.widget-webpage-urlbar-hint {
+  visibility: hidden;
+}
+
+.widget-webpage-urlbar:hover .widget-webpage-urlbar-url {
+  text-decoration: underline;
+}
+
+.widget-webpage-urlbar:hover .widget-webpage-urlbar-hint {
+  visibility: visible;
+}
+
+.widget-webpage-button {
+  align-items: center;
+  border-radius: 3px;
+  cursor: default;
+  display: flex;
+  justify-content: center;
+  margin: 2px 1px 2px 3px;
+}
+
+.widget-webpage-button-enabled {
+  cursor: pointer;
+}
+
+.widget-webpage-button-enabled .widget-webpage-button-hover,
+.widget-webpage-button-enabled .widget-webpage-button-active,
+.widget-webpage-button-enabled:hover .widget-webpage-button-normal,
+.widget-webpage-button-enabled:focus .widget-webpage-button-normal,
+.widget-webpage-button-enabled:active .widget-webpage-button-normal {
+  display: none;
+}
+
+.widget-webpage-button-enabled:hover .widget-webpage-button-hover,
+.widget-webpage-button-enabled:focus .widget-webpage-button-hover {
+  display: inline;
+}
+
+.widget-webpage-button-enabled:active .widget-webpage-button-active {
+  display: inline;
+}
+
+.widget-webpage-button-enabled:active .widget-webpage-button-hover {
+  display: none;
+}
+
+.widget-webpage-button img {
+  height: 1.4em;
+  width: auto;
+}
+
+.widget-webpage-frame-wrapper {
+  border: 3px solid gainsboro;
+  border-top: none;
+  overflow: hidden;
+}
+
+.widget-webpage-frame {
+  border: none;
+  height: 133.33333%;
+  -moz-transform: scale(0.75);
+  -moz-transform-origin: 0 0;
+  -ms-transform: scale(0.75);
+  -ms-transform-origin: 0 0;
+  -o-transform: scale(0.75);
+  -o-transform-origin: 0 0;
+  -webkit-transform: scale(0.75);
+  -webkit-transform-origin: 0 0;
+  transform: scale(0.75);
+  transform-origin: 0 0;
+  width: 133.33333%;
+}
+
+/* Card */
+
+.card-disclosure {
+  border: 1px solid #c2dcc2;
+  color: black;
+  cursor: pointer;
+  display: inline-block;
+  font-size: 90%;
+  padding: 0.2em 0.5em;
+  text-align: left;
+  vertical-align: middle;
+}
+
+.card-disclosure-content {
+  border: 1px solid #c2dcc2;
+  margin: 0.7em 0;
+  padding: 0.1em 0.5em 0.5em;
+}
+
+.card-disclosure-content > :not(legend) {
+  -moz-animation: card-disclosure-content-fadein 0.2s; /* Firefox < 16 */
+  -ms-animation: card-disclosure-content-fadein 0.2s; /* Internet Explorer */
+  -o-animation: card-disclosure-content-fadein 0.2s; /* Opera < 12.1 */
+  -webkit-animation: card-disclosure-content-fadein 0.2s; /* Safari, Chrome and Opera > 12.1 */
+  animation: card-disclosure-content-fadein 0.2s;
+}
+
+.card-disclosure-content .card-disclosure-content {
+  border: none;
+}
+
+.card-disclosure-collapsed {
+  display: inline-block;
+}
+
+@keyframes card-disclosure-content-fadein {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+/* Firefox < 16 */
+@-moz-keyframes card-disclosure-content-fadein {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+/* Safari, Chrome and Opera > 12.1 */
+@-webkit-keyframes card-disclosure-content-fadein {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+/* Internet Explorer */
+@-ms-keyframes card-disclosure-content-fadein {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+/* Opera < 12.1 */
+@-o-keyframes card-disclosure-content-fadein {
+  from { opacity: 0; }
+  to { opacity: 1; }
 }

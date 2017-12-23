@@ -11,25 +11,30 @@ def get_config(input_file):
 def make_parent_dirs(path):
     from errno import EEXIST
     from os import makedirs
-    from os.path import dirname, isdir
+    from os.path import dirname
 
     try:
         makedirs(dirname(path))
     except OSError as exc:
-        if exc.errno == EEXIST and isdir(path):
+        if exc.errno == EEXIST:
             pass
         else:
             raise
 
 
 def download_file_with_mkdir(src, dst):
+    from os.path import exists
+    if exists(dst):
+        print "  File exists, skipping."
+        return
+
     import urllib2
     opener = urllib2.build_opener()
     opener.addheaders = [('User-Agent', 'Mozilla/5.0')]
     f = opener.open(src)
     content = f.read()
     make_parent_dirs(dst)
-    with open(dst, 'wb') as f:
+    with open(dst, 'wxb') as f:
         f.write(content)
 
 
@@ -73,7 +78,7 @@ class Packages(dict):
         print
 
     def print_htmls(self, version):
-        for section in ('style', 'script'):
+        for section in ('style', 'script', 'indirect'):
             print section
             for path in self.paths_by_section()[section]:
                 print path[version].html
@@ -126,15 +131,21 @@ class Path(dict):
 class PathVersion(str):
     def __init__(self, *args, **kwargs):
         str.__init__(self, *args, **kwargs)
-        if self.endswith('.js'):
+        from os.path import splitext
+        filename, ext = splitext(self)
+
+        if ext in '.js'.split():
             self.html_section = 'script'
             self.html = '''<script type="text/javascript" src="%s"></script>''' % self
-        elif self.endswith('.jsx'):
+        elif ext in '.jsx'.split():
             self.html_section = 'script'
             self.html = '''<script type="text/jsx" src="%s"></script>''' % self
-        elif self.endswith('.css'):
+        elif ext in '.css'.split():
             self.html_section = 'style'
             self.html = '''<link rel="stylesheet" href="%s" />''' % self
+        elif ext in '.eot .svg .ttf .woff .woff2 .otf'.split():
+            self.html_section = 'indirect'
+            self.html = '''%s''' % self
         else:
             raise ValueError("Unsupported extension for %s" % self)
 

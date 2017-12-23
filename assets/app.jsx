@@ -30,6 +30,47 @@ function decodeContentFromGithub(encodedString) {
   return utf8.decode(atob(encodedString));
 }
 
+function getHashParams(url) {
+  var hashMatch = url.match(/^([^#]*)#(.*)$/);
+  if (!hashMatch)
+    return {
+      urlWithoutHash: url,
+    };
+
+  // https://stackoverflow.com/a/21152762/782045
+  var data = {
+    urlWithoutHash: hashMatch[1],
+  };
+  var query = hashMatch[2];
+  for (let item of query.split("&")) {
+    var kvMatch = item.match(/^([^=]*)=(.*)$/);
+    if (!kvMatch)
+      continue;
+    var [key, val] = kvMatch.slice(1).map(decodeURIComponent);
+    data[key] = val;
+  }
+  return data;
+}
+
+// https://stackoverflow.com/a/14780463/782045
+function joinPath(base, relative) {
+  var stack = base.split("/"),
+    parts = relative.split("/");
+
+  // remove current file name (or empty string)
+  // (omit if "base" is the current folder without trailing slash)
+  stack.pop();
+  for (var i=0; i<parts.length; i++) {
+    if (parts[i] === ".")
+      continue;
+    if (parts[i] === "..")
+      stack.pop();
+    else
+      stack.push(parts[i]);
+  }
+  return stack.join("/");
+}
+
 const Commonmark = reactCommonmark;
 
 class Github {
@@ -46,7 +87,7 @@ class Github {
         "Accept": "application/vnd.github.v3+json",
       },
       contentType: "application/json",
-      data: (method == "GET")
+      data: (method === "GET")
         ? dataObject
         : JSON.stringify(dataObject),
     });
@@ -132,8 +173,10 @@ function makePromisedElement(handlers) {
 
   f.receive = function(el) {
     if (el !== this.lastEl) {
-      // Note that both conditions can technically be true, although
-      // AFAIK they won't both be true if we use React.
+      // Note that order of the `if`s is important. A changing element is
+      // treated as if it disappeared and then reappeared. Note that in our
+      // current use case (React), elements won't change in this way -- they'll
+      // change to null first.
       if (this.lastEl !== null) {
         // The element disapppeared.
         this.reject();
@@ -350,7 +393,7 @@ class GithubFileEditor extends ReactComponentWithFiniteStates(GithubFileStates) 
     return (
       <textarea className="githubeditor-simplemde-container"
         ref={this.simplemdeContainer.receive}
-        {...this.props}></textarea>
+        {...this.props}>{undefined}</textarea>
     );
   }
 
@@ -394,15 +437,18 @@ class GithubFileEditor extends ReactComponentWithFiniteStates(GithubFileStates) 
     }
     catch (request) {
       switch (request.status) {
-        case 401:
+        case 401: {
           return this.transitionFiniteState("LOAD_FAILED_401");
-        case 404:
+        }
+        case 404: {
           this.setState({
             loadedFileSha: undefined,
           });
           return this.transitionFiniteState("LOAD_FAILED_404");
-        default:
+        }
+        default: {
           throw request;
+        }
       }
     }
 
@@ -466,25 +512,73 @@ class GithubFileReadView extends ReactComponentWithFiniteStates(GithubFileStates
   }
 
   renderers = {
-    link: (props) => {
-      if (props.href.match(/:\/\//)) {
-        return <a href={props.href} target="_blank">{props.children}</a>;
+    link: function(props) {
+      var hashParams = getHashParams(props.href);
+      var url = hashParams.urlWithoutHash;
+      var urlIsAbsolute = props.href.match(/:\/\//);
+
+      var type;
+      if (hashParams.type && hashParams.type.match(/iframe|inlinelink|normallink|video/)) {
+        type = hashParams.type;
       }
       else {
-        return <GithubFileReadViewExpandableLink
-          repo={this.props.repo}
-          filepath={`howto/${props.href}`}
-          github={this.props.github}
-          name={props.children} />;
+        type = urlIsAbsolute ? "normallink" : "inlinelink";
+      }
+
+      switch (type) {
+        case "iframe": {
+          return <GithubFileReadViewIframe
+            src={url}
+            height={hashParams.height}
+            width={hashParams.width}>
+            {props.children}
+          </GithubFileReadViewIframe>;
+        }
+        case "inlinelink": {
+          return <GithubFileReadViewExpandableLink
+            repo={this.props.repo}
+            filepath={joinPath(this.props.filepath, url)}
+            github={this.props.github}>
+            {props.children}
+          </GithubFileReadViewExpandableLink>;
+        }
+        case "normallink": {
+          return <a
+            href={props.href}
+            target={hashParams.target || "_blank"}>
+            {props.children}
+          </a>;
+        }
+        case "video": {
+          return <video
+            className="widget-video"
+            controls
+            alt={props.children.join("\n")}
+            height={hashParams.height}
+            width={hashParams.width}
+            src={url} />;
+        }
+        default: {
+          throw `Invalid link type: ${type}`;
+        }
       }
     },
-    paragraph: (props) => {
-      return <GithubFileReadViewParagraph {...props} />;
+    paragraph: function(props) {
+      return <div className="para">
+        {props.children}
+      </div>;
     },
   };
 
   state = {
     finiteState: "INITIAL",
+  }
+
+  constructor() {
+    super();
+    for (let key in this.renderers) {
+      this.renderers[key] = this.renderers[key].bind(this);
+    }
   }
 
   async componentDidMount() {
@@ -505,14 +599,18 @@ class GithubFileReadView extends ReactComponentWithFiniteStates(GithubFileStates
     }
     catch (request) {
       switch (request.status) {
-        case 0:
+        case 0: {
           return;
-        case 401:
+        }
+        case 401: {
           return this.transitionFiniteState("LOAD_FAILED_401");
-        case 404:
+        }
+        case 404: {
           return this.transitionFiniteState("LOAD_FAILED_404");
-        default:
+        }
+        default: {
           throw request;
+        }
       }
     }
 
@@ -531,7 +629,7 @@ class GithubFileReadViewExpandableLink extends React.Component {
           <legend
             className="card-disclosure card-disclosure-expanded"
             onClick={() => this.setState({expanded: false})}>
-            &#x229f; {this.props.name}</legend>
+            &#x229f; {this.props.children}</legend>
           <GithubFileView {...this.props} />
         </fieldset>
       );
@@ -541,7 +639,7 @@ class GithubFileReadViewExpandableLink extends React.Component {
         <div
           className="card-disclosure card-disclosure-collapsed card-disclosure-outer"
           onClick={() => this.setState({expanded: true})}>
-          &#x229e; {this.props.name}</div>
+          &#x229e; {this.props.children}</div>
       );
     }
   }
@@ -551,11 +649,52 @@ class GithubFileReadViewExpandableLink extends React.Component {
   }
 }
 
-class GithubFileReadViewParagraph extends React.Component {
+class GithubFileReadViewIframe extends React.Component {
   render() {
-    return <div className="para">
-      {this.props.children}
+    return <div className="widget-webpage-browser">
+      <div className="widget-webpage-toolbar">
+        <div className="widget-webpage-button">
+          <img src="assets/app/browser_back_disabled.png" />
+        </div>
+        <div className="widget-webpage-button">
+          <img src="assets/app/browser_forward_disabled.png" />
+        </div>
+        <div className="widget-webpage-button widget-webpage-button-enabled" onClick={this.reload}>
+          <img className="widget-webpage-button-normal" src="assets/app/browser_reload_normal.png" />
+          <img className="widget-webpage-button-hover" src="assets/app/browser_reload_hover.png" />
+          <img className="widget-webpage-button-active" src="assets/app/browser_reload_pressed.png" />
+        </div>
+        <a
+          className="widget-webpage-urlbar"
+          href={this.props.src}
+          target="_blank"
+          title="Click to open in new tab">
+          <span className="widget-webpage-urlbar-url">{this.props.src}</span>
+          <span> </span>
+          <span className="widget-webpage-urlbar-hint">(Open in new tab)</span></a>
+      </div>
+      <div
+        className="widget-webpage-frame-wrapper"
+        style={{
+          width: this.props.width && this.props.width + "px",
+          height: this.props.height && this.props.height + "px",
+        }}>
+        <iframe className="widget-webpage-frame"
+          {...this.props} width={undefined} height={undefined}
+          ref={this.frame.receive} />
+      </div>
     </div>;
+  }
+
+  constructor() {
+    super();
+    this.frame = makePromisedElement();
+    this.reload = this.reload.bind(this);
+  }
+
+  async reload() {
+    var frame = await this.frame();
+    frame.src = this.props.src + "";
   }
 }
 
@@ -572,16 +711,16 @@ function findRepoName() {
   throw `No repo set. Set one as follows: localStorage["szhu.qa.repoName"] = "your/repo"`;
 }
 
-function main(repo, el) {
+function main() {
   var github = window.github = new Github();
   github.accessToken = localStorage["szhu.qa.login"];
 
   ReactDOM.render(
     <GithubFileView
       repo={findRepoName()}
-      filepath="howto/index.md"
+      filepath="docs/index.md"
       github={github} />,
-    document.getElementById("react-root"));,
+    document.getElementById("react-root"),
   );
 }
 
