@@ -68,12 +68,40 @@ class PathMatcher:
 
 
 class QaMockServerRequestHandler(SimpleHTTPRequestHandler):
+    def translate_path(self, path):
+        import os
+        import posixpath
+        import urllib
+
+        """Translate a /-separated PATH to the local filename syntax.
+        Components that mean special things to the local file system
+        (e.g. drive or directory names) are ignored.  (XXX They should
+        probably be diagnosed.)
+        """
+        # abandon query parameters
+        path = path.split('?', 1)[0]
+        path = path.split('#', 1)[0]
+        path = posixpath.normpath(urllib.unquote(path))
+        words = path.split('/')
+        words = filter(None, words)
+
+        # Only the following line is modified
+        path = self.server.asset_root
+        # End modifications
+
+        for word in words:
+            drive, word = os.path.splitdrive(word)
+            head, word = os.path.split(word)
+            if word in (os.curdir, os.pardir): continue
+            path = os.path.join(path, word)
+        return path
+
     def send_augmented_index_page(self):
         import json
         self.send_response(200)
         self.send_header("Content-type", "text/html")
         self.end_headers()
-        with open('index.html') as f:
+        with open(self.server.asset_path('index.html')) as f:
             self.wfile.write(f.read())
         self.wfile.write(
             '''<script>window.qaLocalConfig = %s;</script>'''
@@ -111,8 +139,9 @@ class QaMockServerRequestHandler(SimpleHTTPRequestHandler):
         m = PathMatcher(self.path)
         if m.match('/api/repos/:user/:repo/contents/*path'):
             request_payload = self.receive_json_request()
+            old_sha = request_payload['sha'] if 'sha' in request_payload else None
             try:
-                successful_response = self.do_write_file(m['user'], m['repo'], m['path'], request_payload['sha'], request_payload['content'])
+                successful_response = self.do_write_file(m['user'], m['repo'], m['path'], old_sha, request_payload['content'])
             except IOError as e:
                 self.send_json_response(404, {"message": "Not Found", "details": str(e)})
             else:
@@ -127,7 +156,7 @@ class QaMockServerRequestHandler(SimpleHTTPRequestHandler):
         if (user, repo) != ('local', 'repo'):
             raise IOError("This mock server can only return data for the repo 'local/repo'.")
 
-        with open(path, 'rb') as f:
+        with open(self.server.content_path(path), 'rb') as f:
             content = f.read()
 
         return {
@@ -142,11 +171,15 @@ class QaMockServerRequestHandler(SimpleHTTPRequestHandler):
 
     def do_write_file(self, user, repo, path, old_sha, b64content):
         from base64 import b64decode
-        from os.path import basename
+        from os.path import basename, exists
 
-        with open(path, 'rb') as f:
-            actual_old_content = f.read()
-        actual_old_sha = get_blob_sha(actual_old_content)
+        if exists(self.server.content_path(path)):
+            with open(self.server.content_path(path), 'rb') as f:
+                actual_old_content = f.read()
+            actual_old_sha = get_blob_sha(actual_old_content)
+        else:
+            actual_old_sha = None
+
         if old_sha != actual_old_sha:
             raise IOError(
                 "Old SHA doesn't match. Given SHA: %s, actual old SHA: %s"
@@ -154,7 +187,7 @@ class QaMockServerRequestHandler(SimpleHTTPRequestHandler):
             )
 
         content = b64decode(b64content)
-        with open(path, 'wb') as f:
+        with open(self.server.content_path(path), 'wb') as f:
             f.write(content)
 
         return {
@@ -168,12 +201,35 @@ class QaMockServerRequestHandler(SimpleHTTPRequestHandler):
         }
 
 
+class QaMockServer(HTTPServer):
+    def __init__(self, address_binding, asset_root, content_root):
+        HTTPServer.__init__(self, address_binding, QaMockServerRequestHandler)
+        self.asset_root = asset_root
+        self.content_root = content_root
+
+    def asset_path(self, path):
+        from os.path import join
+        return join(self.asset_root, path)
+
+    def content_path(self, path):
+        from os.path import join
+        return join(self.content_root, path)
+
+
 if __name__ == "__main__":
-    import argparse
-    parser = argparse.ArgumentParser(description='A simple mock server for testing content locally.')
+    from argparse import ArgumentParser
+    from os.path import dirname
+    from sys import argv
+
+    parser = ArgumentParser(description='A simple mock server for testing content locally.')
+    parser.add_argument(dest='DOCUMENT_ROOT', type=str, nargs='?', default='.')
     parser.add_argument('-b', '--binding', type=int, dest='PORT', default=8000)
     parser.add_argument('-p', '--port', type=str, dest='IP', default='localhost')
     args = parser.parse_args()
 
-    server = HTTPServer((args.IP, args.PORT), QaMockServerRequestHandler)
+    # argv[0] is something like /path/to/qa/repo/bin/mock-api-server
+    # asset_root should be like /path/to/qa/repo
+    asset_root = dirname(dirname(argv[0]))
+
+    server = QaMockServer((args.IP, args.PORT), asset_root, args.DOCUMENT_ROOT)
     server.serve_forever()
