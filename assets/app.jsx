@@ -78,10 +78,22 @@ class Github {
     this.accessToken = accessToken;
   }
 
+  canEdit() {
+    if (window.qaLocalConfig && window.qaLocalConfig.useMockGithubApi)
+      return true;
+
+    if (this.accessToken)
+      return true;
+
+    return false;
+  }
+
   request(method, path, dataObject) {
     return $.ajax({
       type: method,
-      url: Url("https", "api.github.com", path),
+      url: (window.qaLocalConfig && window.qaLocalConfig.useMockGithubApi)
+        ? "api" + path
+        : Url("https", "api.github.com", path),
       headers: {
         "Authorization": this.accessToken ? `Bearer ${this.accessToken}` : undefined,
         "Accept": "application/vnd.github.v3+json",
@@ -94,111 +106,124 @@ class Github {
   }
 }
 
-function ReactComponentWithFiniteStates(finiteStates) {
-  return class ReactComponentWithFiniteStates extends React.Component {
-    constructor(...args) {
-      super(...args);
-      this._checkFiniteStates();
-    }
+class FiniteStateManager {
+  constructor(instance, key, states) {
+    this.instance = instance;
+    this.key = key;
+    this.states = states;
 
-    _checkFiniteStates() {
-      for (let [stateName, state] of Object.entries(finiteStates)) {
-        for (let [transitionName, newState] of Object.entries(state.transitions)) {
-          try {
-            this._ensureValidState(newState);
-          }
-          catch (err) {
-            throw `Transition ${stateName}.${transitionName} -> ${newState}: ${err}`;
-          }
+    this.checkFiniteStates();
+  }
+
+  checkFiniteStates() {
+    for (let [stateName, state] of Object.entries(this.states)) {
+      for (let [transitionName, newStateName] of Object.entries(state.transitions)) {
+        try {
+          this.ensureValidStateName(newStateName);
+        }
+        catch (err) {
+          throw `Transition ${stateName}.${transitionName} -> ${newStateName}: ${err}`;
         }
       }
     }
-
-    _ensureValidState(state) {
-      if (state in finiteStates) {
-        return state;
-      }
-      else {
-        throw `State ${state} is invalid`;
-      }
-    }
-
-    finiteState() {
-      return finiteStates[this.state.finiteState];
-    }
-
-    // Convenience function that will follow the input either as a transition or a new state.
-    transitionFiniteState(transitionOrNewState) {
-      if (transitionOrNewState in finiteStates) {
-        this._setFiniteState(transitionOrNewState);
-      }
-      else {
-        this._transitionFiniteState(transitionOrNewState);
-      }
-    }
-
-    // Follow the given transition to a new state.
-    _transitionFiniteState(transition) {
-      const newState = this.finiteState().transitions[transition];
-      if (!newState) {
-        throw `Transition ${this.state.finiteState}.${transition} doesn't exist`;
-      }
-      this._setFiniteState(newState);
-    }
-
-    // Go to the given state.
-    _setFiniteState(newState) {
-      this.setState({finiteState: newState});
-    }
-  };
-}
-
-function makePromisedElement(handlers) {
-  var {onLoad, onUnload} = handlers || {};
-
-  function f() {
-    return f.promise;
   }
 
-  f.lastEl = null;
-  f.onLoad = onLoad || function() {};
-  f.onUnload = onUnload || function() {};
+  ensureValidStateName(stateName) {
+    if (stateName in this.states) {
+      return stateName;
+    }
+    else {
+      throw `State ${stateName} is invalid`;
+    }
+  }
 
-  f.resetPromise = function() {
+  currentStateName() {
+    return this.ensureValidStateName(this.instance.state[this.key]);
+  }
+
+  currentStateProps() {
+    return this.states[this.currentStateName()];
+  }
+
+  // Follow the given transition to a new state.
+  transition(transitionName) {
+    const newState = this.currentStateProps().transitions[transitionName];
+    if (newState == null) {
+      throw `Transition ${this.currentStateName()}.${transitionName} doesn't exist`;
+    }
+    this.set(newState);
+  }
+
+  // Go to the given state.
+  set(newState) {
+    var newReactState = {};
+    newReactState[this.key] = this.ensureValidStateName(newState);
+    this.instance.setState(newReactState);
+  }
+
+  props() {
+    return this.currentStateProps();
+  }
+}
+
+class PromisedElement {
+  constructor(props) {
+    var {onLoad, onUnload} = props || {};
+    this.onLoad = onLoad;
+    this.onUnload = onUnload;
+
+    this.receive = this.receive.bind(this);
+
+    this.lastEl = null;
+    this.resetPromise();
+  }
+
+  resetPromise() {
     this.promise = new Promise((resolve, reject) => {
       this.resolve = resolve;
       this.reject = reject;
     });
-  };
+  }
 
-  f.receive = function(el) {
+  receive(el) {
     if (el !== this.lastEl) {
       // Note that order of the `if`s is important. A changing element is
       // treated as if it disappeared and then reappeared. Note that in our
       // current use case (React), elements won't change in this way -- they'll
-      // change to null first.
-      if (this.lastEl !== null) {
+      // change to null before reappearing.
+      if (this.lastEl != null) {
         // The element disapppeared.
         this.reject();
         this.resetPromise();
-        this.onUnload(this.lastEl);
+        this.onUnload && this.onUnload(this.lastEl);
       }
-      if (el !== null) {
+      if (el != null) {
         // The element appeared.
         this.resolve(el);
-        this.onLoad(el);
+        this.onLoad && this.onLoad(el);
       }
     }
     this.lastEl = el;
-  };
-  f.receive = f.receive.bind(f);
+  }
 
-  f.resetPromise();
-  return f;
+  get() {
+    return this.promise;
+  }
 }
 
 class GithubLoginInfo extends React.Component {
   render() {
+    if (window.qaLocalConfig && window.qaLocalConfig.useMockGithubApi)
+      return this.renderMock();
+    else
+      return this.renderReal();
+  }
+
+  renderMock() {
+    return "Loading and saving from local server. This tool may be unreliable, so please keep backups by commiting your content often!";
+  }
+
+  renderReal() {
     return (
       <span {...this.props}>
         Signed in as
@@ -230,6 +255,9 @@ class GithubLoginInfo extends React.Component {
   };
 
   componentWillMount() {
+    if (window.qaLocalConfig && window.qaLocalConfig.useMockGithubApi)
+      return;
+
     this.retrieveUserInfo();
     this.retrieveUserEmails();
   }
@@ -258,7 +286,7 @@ class GithubFileView extends React.Component {
     return (
       <div>
         {
-          this.props.github.accessToken
+          this.props.github.canEdit()
             ? [
               <a href={this.state.editMode ? "javascript:" : undefined}
                 onClick={() => this.setState({editMode: false})}
@@ -298,7 +326,7 @@ class GithubFileView extends React.Component {
   }
 }
 
-const GithubFileStates = {
+const GithubFileLoadingStates = {
   INITIAL: {
     hasContent: false,
     shouldShowEditor: false,
@@ -365,23 +393,38 @@ const GithubFileStates = {
   },
 };
 
-class GithubFileEditor extends ReactComponentWithFiniteStates(GithubFileStates) {
+const GithubFileSavingStates = {
+  OK: {
+    saveButtonLabel: "Save",
+    transitions: {},
+  },
+  SAVING: {
+    saveButtonLabel: "Saving",
+    transitions: {},
+  },
+  SAVE_FAILED: {
+    saveButtonLabel: "Saving failed",
+    transitions: {},
+  },
+};
+
+class GithubFileEditor extends React.Component {
   render() {
     return (
       <div ref={this.root.receive} {...this.props}>
         <button className="githubeditor-control-revert"
-          onClick={() => this.load()}>
+          onClick={this.load}>
           Load</button>
         <button className="githubeditor-control-save"
-          onClick={() => this.save()}>
-          {this.state.saving ? "Saving…" : "Save"}</button>
+          onClick={this.save}>
+          {this.savingState.props().saveButtonLabel}</button>
         <span> </span>
         <GithubLoginInfo className="githubeditor-login"
           github={this.props.github} />
-        { this.finiteState().message
-          ? this.finiteState().message()
+        { this.loadingState.props().message
+          ? this.loadingState.props().message()
           : undefined }
-        { this.finiteState().shouldShowEditor
+        { this.loadingState.props().shouldShowEditor
           ? this.renderEditor()
           : undefined }
 
@@ -398,13 +441,27 @@ class GithubFileEditor extends ReactComponentWithFiniteStates(GithubFileStates) 
   }
 
   state = {
-    finiteState: "INITIAL",
+    loading: "INITIAL",
+    saving: "OK",
   };
 
   constructor() {
     super();
-    this.root = makePromisedElement();
-    this.simplemdeContainer = makePromisedElement({
+    this.save = this.save.bind(this);
+    this.load = this.load.bind(this);
+
+    this.initStates();
+    this.initContainers();
+  }
+
+  initStates() {
+    this.loadingState = new FiniteStateManager(this, "loading", GithubFileLoadingStates);
+    this.savingState = new FiniteStateManager(this, "saving", GithubFileSavingStates);
+  }
+
+  initContainers() {
+    this.root = new PromisedElement();
+    this.simplemdeContainer = new PromisedElement({
       onLoad: async (el) => {
         this.simplemde.receive(new SimpleMDE({
           element: el,
@@ -416,7 +473,7 @@ class GithubFileEditor extends ReactComponentWithFiniteStates(GithubFileStates) 
         this.simplemde.receive(null);
       },
     });
-    this.simplemde = makePromisedElement({
+    this.simplemde = new PromisedElement({
       onUnload: async (el) => {
         el.toTextArea();
       }
@@ -429,7 +486,7 @@ class GithubFileEditor extends ReactComponentWithFiniteStates(GithubFileStates) 
   }
 
   async load() {
-    this.transitionFiniteState("startLoad");
+    this.loadingState.transition("startLoad");
     try {
       this.fetchedFile = await this.props.github.request(
         "GET", `/repos/${this.props.repo}/contents/${this.props.filepath}`
@@ -438,13 +495,13 @@ class GithubFileEditor extends ReactComponentWithFiniteStates(GithubFileStates) 
     catch (request) {
       switch (request.status) {
         case 401: {
-          return this.transitionFiniteState("LOAD_FAILED_401");
+          return this.loadingState.set("LOAD_FAILED_401");
         }
         case 404: {
           this.setState({
             loadedFileSha: undefined,
           });
-          return this.transitionFiniteState("LOAD_FAILED_404");
+          return this.loadingState.set("LOAD_FAILED_404");
         }
         default: {
           throw request;
@@ -456,49 +513,58 @@ class GithubFileEditor extends ReactComponentWithFiniteStates(GithubFileStates) 
       loadedMarkdownContent: decodeContentFromGithub(this.fetchedFile.content),
       loadedFileSha: this.fetchedFile.sha,
     });
-    this.simplemde().then((simplemde) => {
-      window.simplemde = simplemde;
-      window.loadedMarkdownContent = this.state.loadedMarkdownContent;
+
+    this.simplemde.get().then((simplemde) => {
       simplemde.value(this.state.loadedMarkdownContent);
     });
-    return this.transitionFiniteState("LOADED");
+
+    return this.loadingState.set("LOADED");
   }
 
   async save() {
-    if (!this.finiteState().shouldShowEditor)
+    if (!this.loadingState.props().shouldShowEditor)
       throw "Can't save because there is no editor.";
 
-    this.setState({saving: true});
-    var simplemde = await this.simplemde();
-    var updatedFile = await this.props.github.request(
-      "PUT", `/repos/${this.props.repo}/contents/${this.props.filepath}`, {
-        branch: this.props.branch,
-        message: `Update ${this.props.filepath}`,
-        committer: {
-          name: $(this.root).find(".github-user-name").val(),
-          email: $(this.root).find(".github-user-email").val(),
-        },
-        content: encodeContentForGithub(simplemde.value()),
-        sha: this.state.loadedFileSha,
+    this.savingState.set("SAVING");
+    var simplemde = await this.simplemde.get();
+    try {
+      var updatedFile = await this.props.github.request(
+        "PUT", `/repos/${this.props.repo}/contents/${this.props.filepath}`, {
+          branch: this.props.branch,
+          message: `Update ${this.props.filepath}`,
+          committer: {
+            name: $(this.root).find(".github-user-name").val(),
+            email: $(this.root).find(".github-user-email").val(),
+          },
+          content: encodeContentForGithub(simplemde.value()),
+          sha: this.state.loadedFileSha,
+        }
+      );
+    }
+    catch (request) {
+      this.savingState.set("SAVE_FAILED");
+      switch (request.status) {
+        default: {
+          throw request;
+        }
       }
-    );
-    this.fetchedFile = updatedFile.content;
+    }
 
+    this.fetchedFile = updatedFile.content;
     this.setState({
-      saving: false,
       loadedFileSha: this.fetchedFile.sha,
     });
-    return this.transitionFiniteState("LOADED");
+    return this.savingState.set("OK");
   }
 }
 
-class GithubFileReadView extends ReactComponentWithFiniteStates(GithubFileStates) {
+class GithubFileReadView extends React.Component {
   render() {
     return <div>
-      { this.finiteState().message
-        ? this.finiteState().message()
+      { this.loadingState.props().message
+        ? this.loadingState.props().message()
         : undefined }
-      { this.finiteState().hasContent
+      { this.loadingState.props().hasContent
         ? this.renderContent()
         : undefined }
     </div>;
@@ -553,7 +619,7 @@ class GithubFileReadView extends ReactComponentWithFiniteStates(GithubFileStates
           return <video
             className="widget-video"
             controls
-            alt={props.children.join("\n")}
+            alt={props.children.join(" ")}
             height={hashParams.height}
             width={hashParams.width}
             src={url} />;
@@ -571,7 +637,7 @@ class GithubFileReadView extends ReactComponentWithFiniteStates(GithubFileStates
   };
 
   state = {
-    finiteState: "INITIAL",
+    loading: "INITIAL",
   }
 
   constructor() {
@@ -579,6 +645,12 @@ class GithubFileReadView extends ReactComponentWithFiniteStates(GithubFileStates
     for (let key in this.renderers) {
       this.renderers[key] = this.renderers[key].bind(this);
     }
+
+    this.initStates();
+  }
+
+  initStates() {
+    this.loadingState = new FiniteStateManager(this, "loading", GithubFileLoadingStates);
   }
 
   async componentDidMount() {
@@ -590,7 +662,7 @@ class GithubFileReadView extends ReactComponentWithFiniteStates(GithubFileStates
   }
 
   async load() {
-    this.transitionFiniteState("startLoad");
+    this.loadingState.transition("startLoad");
     try {
       this.fetchedFileRequest = this.props.github.request(
         "GET", `/repos/${this.props.repo}/contents/${this.props.filepath}`
@@ -603,10 +675,10 @@ class GithubFileReadView extends ReactComponentWithFiniteStates(GithubFileStates
           return;
         }
         case 401: {
-          return this.transitionFiniteState("LOAD_FAILED_401");
+          return this.loadingState.set("LOAD_FAILED_401");
         }
         case 404: {
-          return this.transitionFiniteState("LOAD_FAILED_404");
+          return this.loadingState.set("LOAD_FAILED_404");
         }
         default: {
           throw request;
@@ -617,7 +689,7 @@ class GithubFileReadView extends ReactComponentWithFiniteStates(GithubFileStates
     this.setState({
       markdownContent: decodeContentFromGithub(this.fetchedFile.content),
     });
-    return this.transitionFiniteState("LOADED");
+    return this.loadingState.set("LOADED");
   }
 }
 
@@ -688,27 +760,32 @@ class GithubFileReadViewIframe extends React.Component {
 
   constructor() {
     super();
-    this.frame = makePromisedElement();
     this.reload = this.reload.bind(this);
+    this.frame = new PromisedElement();
   }
 
   async reload() {
-    var frame = await this.frame();
+    var frame = await this.frame.get();
     frame.src = this.props.src + "";
   }
 }
 
 function findRepoName() {
-  var match = location.href.match(/^https?:\/\/(\w+)\.github\.io\/(\w+)/);
-  if (match) {
-    return `${match[1]}/${match[2]}`;
+  if (window.qaLocalConfig && window.qaLocalConfig.useMockGithubApi) {
+    return "local/repo";
   }
+  else {
+    var match = location.href.match(/^https?:\/\/(\w+)\.github\.io\/(\w+)/);
+    if (match) {
+      return `${match[1]}/${match[2]}`;
+    }
 
-  if (localStorage["szhu.qa.repoName"]) {
-    return localStorage["szhu.qa.repoName"];
+    if (localStorage["szhu.qa.repoName"]) {
+      return localStorage["szhu.qa.repoName"];
+    }
+
+    throw `No repo set. Set one as follows: localStorage["szhu.qa.repoName"] = "your/repo"`;
   }
-
-  throw `No repo set. Set one as follows: localStorage["szhu.qa.repoName"] = "your/repo"`;
 }
 
 function main() {
