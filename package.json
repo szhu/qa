@@ -10,7 +10,7 @@
   "scripts": {
     "start": "react-scripts-ts start",
     "build": "react-scripts-ts build",
-    "test": "react-scripts-ts test --env=jsdom",
+    "test": "cross-env NODE_PATH=./src react-scripts-ts test --env=jsdom",
     "eject": "react-scripts-ts eject",
     "predeploy": "npm run build",
     "deploy": "gh-pages -d build"
@@ -22,6 +22,7 @@
     "@types/react": "^16.0.40",
     "@types/react-dom": "^16.0.4",
     "@types/utf8": "^2.1.6",
+    "cross-env": "^5.1.3",
     "gh-pages": "^1.1.0",
     "jquery": "^3.3.1",
     "typescript": "^2.7.2",
