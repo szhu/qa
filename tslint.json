@@ -22,7 +22,7 @@
         "jsx-no-lambda": false,
         "jsx-no-multiline-js": false,
         "label-position": true,
-        "max-line-length": [ true, 120 ],
+        "max-line-length": [ false ],
         "member-ordering": [
             true,
             "public-before-private",
@@ -54,6 +54,7 @@
         "no-trailing-whitespace": false,
         "no-unused-expression": true,
         "no-use-before-declare": true,
+        "no-var-keyword": true,
         "one-line": [
             true,
             "check-catch",
@@ -61,7 +62,8 @@
             "check-open-brace",
             "check-whitespace"
         ],
-        "quotemark": [true, "single", "jsx-double"],
+        "ordered-imports": true,
+        "quotemark": [true, "double", "jsx-double"],
         "radix": true,
         "semicolon": [true, "always"],
         "switch-default": true,
