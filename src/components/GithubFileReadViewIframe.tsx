@@ -1,3 +1,9 @@
+import React from "react";
+
+let imageUrl = (assetName: string) => {
+  return require(`./GithubFileReadViewIframe/${assetName}.png`);
+};
+
 interface Props {
   src: string;
   width: string | number | undefined;
@@ -12,10 +18,10 @@ class GithubFileReadViewIframe extends React.Component<Props> {
       <div className="widget-webpage-browser">
         <div className="widget-webpage-toolbar">
           <div className="widget-webpage-button">
-            <img src="assets/app/browser_back_disabled.png" />
+            <img src={imageUrl("browser_back_disabled")} />
           </div>
           <div className="widget-webpage-button">
-            <img src="assets/app/browser_forward_disabled.png" />
+            <img src={imageUrl("browser_forward_disabled")} />
           </div>
           <div
             className="widget-webpage-button widget-webpage-button-enabled"
@@ -23,17 +29,18 @@ class GithubFileReadViewIframe extends React.Component<Props> {
           >
             <img
               className="widget-webpage-button-normal"
-              src="assets/app/browser_reload_normal.png"
+              src={imageUrl("browser_reload_normal")}
             />
             <img
               className="widget-webpage-button-hover"
-              src="assets/app/browser_reload_hover.png"
+              src={imageUrl("browser_reload_hover")}
             />
             <img
               className="widget-webpage-button-active"
-              src="assets/app/browser_reload_pressed.png"
+              src={imageUrl("browser_reload_pressed")}
             />
           </div>
+          <span children=" " />
           <a
             className="widget-webpage-urlbar"
             href={this.props.src}
@@ -41,7 +48,7 @@ class GithubFileReadViewIframe extends React.Component<Props> {
             title="Click to open in new tab"
           >
             <span className="widget-webpage-urlbar-url">{this.props.src}</span>
-            <span>{" "}</span>
+            <span children=" " />
             <span className="widget-webpage-urlbar-hint">
               (Open in new tab)
             </span>
@@ -59,14 +66,14 @@ class GithubFileReadViewIframe extends React.Component<Props> {
             {...this.props}
             width={undefined}
             height={undefined}
-            ref={(el) => this.frame = el}
+            ref={el => (this.frame = el)}
           />
         </div>
       </div>
     );
   }
 
-  reload = async() => {
+  reload = async () => {
     if (!this.frame) {
       return;
     }
@@ -74,3 +81,5 @@ class GithubFileReadViewIframe extends React.Component<Props> {
     this.frame.src = this.props.src + "";
   }
 }
+
+export default GithubFileReadViewIframe;

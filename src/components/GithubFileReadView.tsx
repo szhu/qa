@@ -3,6 +3,7 @@ import Commonmark from "react-commonmark";
 import { resolve } from "url";
 
 import GithubFileReadViewExpandableLink from "components/GithubFileReadViewExpandableLink";
+import GithubFileReadViewIframe from "components/GithubFileReadViewIframe";
 import getHashParams from "util/getHashParams";
 import Github, { decodeContentFromGithub } from "util/Github";
 import * as LoadingStates from "util/LoadingStates";
