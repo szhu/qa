@@ -2,20 +2,23 @@ import React from "react";
 
 import "App.css";
 
-const logo = require("./logo.svg");
+import GithubFileView from "components/GithubFileView";
+import findRepoName from "util/findRepoName";
+import Github from "util/Github";
+
+let github = new Github();
+github.accessToken = localStorage["szhu.qa.login"];
+
+let repoName = findRepoName();
 
 class App extends React.Component {
   render() {
     return (
-      <div className="App">
-        <header className="App-header">
-          <img src={logo} className="App-logo" alt="logo" />
-          <h1 className="App-title">Welcome to React</h1>
-        </header>
-        <p className="App-intro">
-          To get started, edit <code>src/App.tsx</code> and save to reload.
-        </p>
-      </div>
+      <GithubFileView
+        repo={repoName}
+        filepath="docs/index.md"
+        github={github}
+      />
     );
   }
 }

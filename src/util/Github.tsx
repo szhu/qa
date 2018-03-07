@@ -6,7 +6,7 @@ import getLocalConfig from "util/LocalConfig";
 class Github {
   accessToken?: string;
 
-  constructor(accessToken: string) {
+  constructor(accessToken?: string) {
     this.accessToken = accessToken;
   }
 
@@ -40,11 +40,11 @@ class Github {
   }
 }
 
-export function encodeContent(normalString: string) {
+export function encodeContentForGithub(normalString: string) {
   return btoa(utf8.encode(normalString));
 }
 
-export function decodeContent(encodedString: string) {
+export function decodeContentFromGithub(encodedString: string) {
   return utf8.decode(atob(encodedString));
 }
 

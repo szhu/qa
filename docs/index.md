@@ -1,6 +1,6 @@
 ### What is this tool?
 
-This is an experiemental way to view onboarding documents. Just click a link to expand it inline.
+This is an experimental way to view onboarding documents. Just click a link to expand it inline.
 
 Example content:
 

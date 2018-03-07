@@ -5,6 +5,7 @@ import getLocalConfig from "util/LocalConfig";
 
 interface Props {
   github: Github;
+  className: string; // TODO: find built-in way to allow splat props
 }
 
 interface State {
@@ -104,6 +105,14 @@ class GithubLoginInfo extends React.Component<Props, State> {
     this.setState({
       primaryEmail: emails.filter((emailObj) => emailObj.primary)[0].email,
     });
+  }
+
+  get userName(): string | undefined {
+    return this.state.userInputName || this.state.user.name;
+  }
+
+  get userEmail(): string | undefined {
+    return this.state.userInputEmail || this.state.primaryEmail;
   }
 }
 
